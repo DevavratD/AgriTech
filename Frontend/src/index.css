@@ -1,0 +1,143 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 142 76% 97%;
+    --foreground: 142 50% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 142 50% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 142 50% 12%;
+
+    --primary: 142 76% 36%;
+    --primary-foreground: 355 100% 97%;
+
+    --secondary: 60 70% 85%;
+    --secondary-foreground: 60 50% 25%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 35 91% 75%;
+    --accent-foreground: 35 50% 25%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 142 30% 85%;
+    --input: 142 30% 85%;
+    --ring: 142 76% 36%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 142 30% 10%;
+    --foreground: 142 20% 90%;
+
+    --card: 142 25% 15%;
+    --card-foreground: 142 20% 90%;
+
+    --popover: 142 25% 15%;
+    --popover-foreground: 142 20% 90%;
+
+    --primary: 142 70% 40%;
+    --primary-foreground: 142 10% 98%;
+
+    --secondary: 60 30% 30%;
+    --secondary-foreground: 60 20% 90%;
+
+    --muted: 142 20% 20%;
+    --muted-foreground: 142 10% 75%;
+
+    --accent: 35 50% 50%;
+    --accent-foreground: 35 10% 90%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 142 25% 25%;
+    --input: 142 25% 25%;
+    --ring: 142 70% 40%;
+
+    --sidebar-background: 142 30% 10%;
+    --sidebar-foreground: 142 20% 90%;
+    --sidebar-primary: 142 70% 40%;
+    --sidebar-primary-foreground: 142 10% 98%;
+    --sidebar-accent: 142 20% 20%;
+    --sidebar-accent-foreground: 142 10% 90%;
+    --sidebar-border: 142 25% 25%;
+    --sidebar-ring: 142 70% 40%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* PWA-style overscroll behavior */
+  html, body {
+    @apply overflow-x-hidden;
+    overscroll-behavior-y: none;
+  }
+
+  /* For iOS-like feel */
+  .touch-callout-none {
+    -webkit-touch-callout: none;
+  }
+
+  /* Make tap highlights transparent for native feel */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  /* Mobile bottom navigation styles */
+  .bottom-nav-item {
+    @apply flex flex-col items-center justify-center text-sm font-medium transition-colors;
+  }
+  
+  .bottom-nav-icon {
+    @apply mb-1 h-5 w-5;
+  }
+
+  /* Card styles for data displays */
+  .data-card {
+    @apply rounded-xl border bg-card p-4 shadow-sm transition-all hover:shadow-md;
+  }
+  
+  /* Gradient backgrounds */
+  .bg-gradient-green {
+    @apply bg-gradient-to-br from-agritech-600 to-agritech-700;
+  }
+  
+  .bg-gradient-soil {
+    @apply bg-gradient-to-br from-soil-light to-soil;
+  }
+
+  /* Extra small text size */
+  .text-2xs {
+    @apply text-[0.65rem] leading-[0.85rem];
+  }
+}
