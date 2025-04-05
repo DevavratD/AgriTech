@@ -33,41 +33,39 @@ export interface PlantDiseaseResponse {
 // Function to get AI-generated recommendations for plant diseases
 export const getAIRecommendations = async (diseaseName: string): Promise<{treatment: string, prevention: string}> => {
   try {
-    const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
+    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
     
-    if (!OPENROUTER_API_KEY) {
-      console.warn('OpenRouter API key not found, using fallback recommendations');
+    if (!GEMINI_API_KEY) {
+      console.warn('Gemini API key not found, using fallback recommendations');
       return {
         treatment: getDiseaseTreatment(diseaseName),
         prevention: getDiseasePrevention(diseaseName)
       };
     }
     
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': window.location.origin
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "anthropic/claude-3-haiku",
-        messages: [{
-          role: "user",
-          content: `You are an agricultural expert. I need treatment and prevention recommendations for a plant disease: "${diseaseName}".
-          
-          Please provide:
-          1. Treatment recommendations (what to do now that the disease is present)
-          2. Prevention tips (how to avoid this disease in the future)
-          
-          Format your response as a JSON object with two properties: "treatment" and "prevention". 
-          Each should be a concise paragraph with practical advice. Keep each under 150 words.
-          
-          Example format:
-          {
-            "treatment": "Your treatment recommendations here...",
-            "prevention": "Your prevention tips here..."
-          }`
+        contents: [{
+          parts: [{
+            text: `You are an agricultural expert. I need treatment and prevention recommendations for a plant disease: "${diseaseName}".
+            
+            Please provide:
+            1. Treatment recommendations (what to do now that the disease is present)
+            2. Prevention tips (how to avoid this disease in the future)
+            
+            Format your response as a JSON object with two properties: "treatment" and "prevention". 
+            Each should be a concise paragraph with practical advice. Keep each under 150 words.
+            
+            Example format:
+            {
+              "treatment": "Your treatment recommendations here...",
+              "prevention": "Your prevention tips here..."
+            }`
+          }]
         }]
       })
     });
@@ -75,16 +73,23 @@ export const getAIRecommendations = async (diseaseName: string): Promise<{treatm
     const data = await response.json();
     
     try {
-      // Try to parse the AI response as JSON
-      const content = data.choices[0].message.content;
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      
-      if (jsonMatch) {
-        const recommendations = JSON.parse(jsonMatch[0]);
-        return {
-          treatment: recommendations.treatment || getDiseaseTreatment(diseaseName),
-          prevention: recommendations.prevention || getDiseasePrevention(diseaseName)
-        };
+      // Check if data has the expected structure
+      if (data && data.candidates && data.candidates.length > 0 && 
+          data.candidates[0].content && data.candidates[0].content.parts && 
+          data.candidates[0].content.parts.length > 0) {
+            
+        const content = data.candidates[0].content.parts[0].text;
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        
+        if (jsonMatch) {
+          const recommendations = JSON.parse(jsonMatch[0]);
+          return {
+            treatment: recommendations.treatment || getDiseaseTreatment(diseaseName),
+            prevention: recommendations.prevention || getDiseasePrevention(diseaseName)
+          };
+        }
+      } else {
+        console.warn('Unexpected API response structure:', data);
       }
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
@@ -249,10 +254,10 @@ export const getSoilAIInsights = async (soilData: {
   }[];
 }): Promise<string[]> => {
   try {
-    const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
+    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
     
-    if (!OPENROUTER_API_KEY) {
-      console.warn('OpenRouter API key not found, using fallback soil insights');
+    if (!GEMINI_API_KEY) {
+      console.warn('Gemini API key not found, using fallback soil insights');
       return getFallbackSoilInsights(soilData.metrics);
     }
     
@@ -261,54 +266,72 @@ export const getSoilAIInsights = async (soilData: {
       .map(metric => `${metric.name}: ${metric.value}%`)
       .join('\n');
     
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': window.location.origin
-      },
-      body: JSON.stringify({
-        model: "anthropic/claude-3-haiku",
-        messages: [{
-          role: "user",
-          content: `You are an agricultural soil expert. I need specific, actionable recommendations to address the following soil issues:
-          
-          Overall Soil Health: ${soilData.overallHealth}%
-          ${metricsText}
-          
-          For each metric listed above:
-          1. Provide a VERY CONCISE, direct action to take (1-2 sentences max)
-          2. Focus ONLY on immediate, practical steps a farmer can take TODAY
-          3. Be specific about quantities, methods, or products to use
-          
-          Format your response as a JSON array of strings, with each string being a complete but brief recommendation.
-          Keep each recommendation under 100 characters if possible.
-          
-          Example format:
-          [
-            "Add 2kg compost per square meter to improve organic content.",
-            "Install drip irrigation on 12-hour cycle to address low moisture."
-          ]`
-        }]
-      })
-    });
-    
-    const data = await response.json();
-    
     try {
-      // Try to parse the AI response as JSON
-      const content = data.choices[0].message.content;
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `You are an agricultural soil expert. I need specific, actionable recommendations to address the following soil issues:
+              
+              Overall Soil Health: ${soilData.overallHealth}%
+              ${metricsText}
+              
+              For each metric listed above:
+              1. Provide a VERY CONCISE, direct action to take (1-2 sentences max)
+              2. Focus ONLY on immediate, practical steps a farmer can take TODAY
+              3. Be specific about quantities, methods, or products to use
+              
+              Format your response as a JSON array of strings, with each string being a complete but brief recommendation.
+              Keep each recommendation under 100 characters if possible.
+              
+              Example format:
+              [
+                "Add 2kg compost per square meter to improve organic content.",
+                "Install drip irrigation on 12-hour cycle to address low moisture."
+              ]`
+            }]
+          }]
+        })
+      });
       
-      if (jsonMatch) {
-        const insights = JSON.parse(jsonMatch[0]);
-        if (Array.isArray(insights) && insights.length > 0) {
-          return insights;
+      // Check if response is ok
+      if (!response.ok) {
+        console.error(`API response not OK: ${response.status} ${response.statusText}`);
+        return getFallbackSoilInsights(soilData.metrics);
+      }
+      
+      const data = await response.json();
+      
+      // Check if data has the expected structure
+      if (data && data.candidates && data.candidates.length > 0 && 
+          data.candidates[0].content && data.candidates[0].content.parts && 
+          data.candidates[0].content.parts.length > 0) {
+            
+        const content = data.candidates[0].content.parts[0].text;
+        const jsonMatch = content.match(/\[\s\S]*\]/);
+        
+        if (jsonMatch) {
+          try {
+            const insights = JSON.parse(jsonMatch[0]);
+            if (Array.isArray(insights) && insights.length > 0) {
+              return insights;
+            }
+          } catch (jsonError) {
+            console.error('Error parsing JSON from API response:', jsonError);
+            return getFallbackSoilInsights(soilData.metrics);
+          }
         }
       }
-    } catch (parseError) {
-      console.error('Error parsing AI soil insights response:', parseError);
+      
+      console.warn('Unexpected API response structure:', JSON.stringify(data));
+      return getFallbackSoilInsights(soilData.metrics);
+    } catch (error) {
+      console.error('Error getting soil insights from API:', error);
+      return getFallbackSoilInsights(soilData.metrics);
     }
     
     // Fallback to static insights
@@ -729,10 +752,10 @@ export const getMarketAIInsights = async (marketData: MarketInsightsResponse): P
   trading_recommendation: string;
 }> => {
   try {
-    const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
+    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
     
-    if (!OPENROUTER_API_KEY) {
-      console.warn('OpenRouter API key not found, using fallback market insights');
+    if (!GEMINI_API_KEY) {
+      console.warn('Gemini API key not found, using fallback market insights');
       return {
         market_analysis: getFallbackMarketAnalysis(marketData.commodity || ""),
         price_prediction: getFallbackPricePrediction(marketData.commodity || "", marketData.modal_price || 0),
@@ -740,40 +763,38 @@ export const getMarketAIInsights = async (marketData: MarketInsightsResponse): P
       };
     }
     
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': window.location.origin
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "anthropic/claude-3-haiku",
-        messages: [{
-          role: "user",
-          content: `You are an agricultural market expert. I need insights about the following market data:
-          
-          Commodity: ${marketData.commodity}
-          Market: ${marketData.market}, ${marketData.state}
-          Current Modal Price: ₹${marketData.modal_price}/quintal
-          Min Price: ₹${marketData.min_price}/quintal
-          Max Price: ₹${marketData.max_price}/quintal
-          Date: ${marketData.date}
-          
-          Please provide:
-          1. Market Analysis: A brief analysis of the current market situation for this commodity
-          2. Price Prediction: A short-term price prediction based on current trends
-          3. Trading Recommendation: Advice for farmers on whether to sell now or wait
-          
-          Format your response as a JSON object with three properties: "market_analysis", "price_prediction", and "trading_recommendation".
-          Each should be a concise paragraph with practical advice. Keep each under 100 words.
-          
-          Example format:
-          {
-            "market_analysis": "Your market analysis here...",
-            "price_prediction": "Your price prediction here...",
-            "trading_recommendation": "Your trading recommendation here..."
-          }`
+        contents: [{
+          parts: [{
+            text: `You are an agricultural market expert. I need insights about the following market data:
+            
+            Commodity: ${marketData.commodity}
+            Market: ${marketData.market}, ${marketData.state}
+            Current Modal Price: ₹${marketData.modal_price}/quintal
+            Min Price: ₹${marketData.min_price}/quintal
+            Max Price: ₹${marketData.max_price}/quintal
+            Date: ${marketData.date}
+            
+            Please provide:
+            1. Market Analysis: A brief analysis of the current market situation for this commodity
+            2. Price Prediction: A short-term price prediction based on current trends
+            3. Trading Recommendation: Advice for farmers on whether to sell now or wait
+            
+            Format your response as a JSON object with three properties: "market_analysis", "price_prediction", and "trading_recommendation".
+            Each should be a concise paragraph with practical advice. Keep each under 100 words.
+            
+            Example format:
+            {
+              "market_analysis": "Your market analysis here...",
+              "price_prediction": "Your price prediction here...",
+              "trading_recommendation": "Your trading recommendation here..."
+            }`
+          }]
         }]
       })
     });
@@ -781,17 +802,26 @@ export const getMarketAIInsights = async (marketData: MarketInsightsResponse): P
     const data = await response.json();
     
     try {
-      // Try to parse the AI response as JSON
-      const content = data.choices[0].message.content;
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      
-      if (jsonMatch) {
-        const insights = JSON.parse(jsonMatch[0]);
-        return {
-          market_analysis: insights.market_analysis || getFallbackMarketAnalysis(marketData.commodity || ""),
-          price_prediction: insights.price_prediction || getFallbackPricePrediction(marketData.commodity || "", marketData.modal_price || 0),
-          trading_recommendation: insights.trading_recommendation || getFallbackTradingRecommendation(marketData.commodity || "")
-        };
+      // Check if data has the expected structure
+      if (data && data.candidates && data.candidates.length > 0 && 
+          data.candidates[0].content && data.candidates[0].content.parts && 
+          data.candidates[0].content.parts.length > 0) {
+            
+        const content = data.candidates[0].content.parts[0].text;
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        
+        if (jsonMatch) {
+          const insights = JSON.parse(jsonMatch[0]);
+          if (insights && typeof insights === 'object') {
+            return {
+              market_analysis: insights.market_analysis || getFallbackMarketAnalysis(marketData.commodity || ''),
+              price_prediction: insights.price_prediction || getFallbackPricePrediction(marketData.commodity || '', marketData.modal_price || 0),
+              trading_recommendation: insights.trading_recommendation || getFallbackTradingRecommendation(marketData.commodity || '')
+            };
+          }
+        }
+      } else {
+        console.warn('Unexpected API response structure:', data);
       }
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
